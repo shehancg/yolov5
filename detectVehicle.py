@@ -49,13 +49,13 @@ from utils.torch_utils import select_device, smart_inference_mode
 
 @smart_inference_mode()
 def run(
-        weights=ROOT / 'yolov5x.pt',  # model.pt path(s)
+        weights=ROOT / 'yolov5s.pt',  # model.pt path(s)
         source=ROOT / 'data/images',  # file/dir/URL/glob, 0 for webcam
         data=ROOT / 'data/coco128.yaml',  # dataset.yaml path
         imgsz=(640, 640),  # inference size (height, width)
-        conf_thres=0.25,  # confidence threshold
+        conf_thres=0.4,  # confidence threshold
         iou_thres=0.45,  # NMS IOU threshold
-        max_det=1000,  # maximum detections per image
+        max_det=100,  # maximum detections per image
         device='',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
         view_img=False,  # show results
         save_txt=False,  # save results to *.txt
@@ -70,7 +70,7 @@ def run(
         project=ROOT / 'runs/detect',  # save results to project/name
         name='exp',  # save results to project/name
         exist_ok=False,  # existing project/name ok, do not increment
-        line_thickness=3,  # bounding box thickness (pixels)
+        line_thickness=2,  # bounding box thickness (pixels)
         hide_labels=False,  # hide labels
         hide_conf=False,  # hide confidences
         half=False,  # use FP16 half-precision inference
@@ -106,10 +106,12 @@ def run(
     vid_path, vid_writer = [None] * bs, [None] * bs
 
     # ADD LABEL VARIABLES
-    Crutches = 0
-    Wheelchair = 0
-    Whitecane = 0
-    DisabledPeopleCount = 0
+    bicycle = 0
+    car = 0
+    motorcycle = 0
+    bus = 0
+    truck = 0
+    Vehicles = 0
 
     # Run inference
     model.warmup(imgsz=(1 if pt else bs, 3, *imgsz))  # warmup
@@ -174,17 +176,17 @@ def run(
                         #ADD LABEL
                         print("Label***", label)
 
-                        if "Crutches" or "Wheelchair" or "Whitecane" in label:
-                            DisabledPeopleCount = DisabledPeopleCount + 1
+                        if "bicycle" or "car" or "motorcycle" or "bus" or "truck" in label:
+                            Vehicles = Vehicles + 1
 
                         annotator.box_label(xyxy, label, color=colors(c, True))
                     if save_crop:
                         save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
 
-                showCountLabel(im0,"Disabled People Count " + str(DisabledPeopleCount),(20,50),(255,0,0))
+                showCountLabel(im0,"Vehicle Count " + str(Vehicles),(20,50),(255,0,0))
 
 
-            DisabledPeopleCount = 0
+            Vehicles = 0
             # Stream results
             im0 = annotator.result()
             if view_img:
@@ -229,13 +231,13 @@ def run(
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'best.pt', help='model path(s)')
+    parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'yolov5s.pt', help='model path(s)')
     parser.add_argument('--source', type=str, default=ROOT / 'data/images', help='file/dir/URL/glob, 0 for webcam')
     parser.add_argument('--data', type=str, default=ROOT / 'data/coco128.yaml', help='(optional) dataset.yaml path')
     parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[640], help='inference size h,w')
     parser.add_argument('--conf-thres', type=float, default=0.4, help='confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='NMS IoU threshold')
-    parser.add_argument('--max-det', type=int, default=1000, help='maximum detections per image')
+    parser.add_argument('--max-det', type=int, default=100, help='maximum detections per image')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--view-img', action='store_true', help='show results')
     parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
