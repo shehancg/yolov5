@@ -49,7 +49,7 @@ from utils.torch_utils import select_device, smart_inference_mode
 
 @smart_inference_mode()
 def run(
-        weights=ROOT / 'yolov5s.pt',  # model.pt path(s)
+        weights=ROOT / 'yolov5x.pt',  # model.pt path(s)
         source=ROOT / 'data/images',  # file/dir/URL/glob, 0 for webcam
         data=ROOT / 'data/coco128.yaml',  # dataset.yaml path
         imgsz=(640, 640),  # inference size (height, width)
@@ -104,6 +104,12 @@ def run(
         dataset = LoadImages(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
         bs = 1  # batch_size
     vid_path, vid_writer = [None] * bs, [None] * bs
+
+    # ADD LABEL VARIABLES
+    Crutches = 0
+    Wheelchair = 0
+    Whitecane = 0
+    DisabledPeopleCount = 0
 
     # Run inference
     model.warmup(imgsz=(1 if pt else bs, 3, *imgsz))  # warmup
@@ -164,10 +170,21 @@ def run(
                     if save_img or save_crop or view_img:  # Add bbox to image
                         c = int(cls)  # integer class
                         label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
+
+                        #ADD LABEL
+                        print("Label***", label)
+
+                        if "Crutches" or "Wheelchair" or "Whitecane" in label:
+                            DisabledPeopleCount = DisabledPeopleCount + 1
+
                         annotator.box_label(xyxy, label, color=colors(c, True))
                     if save_crop:
                         save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
 
+                showCountLabel(im0,"Disabled People Count " + str(DisabledPeopleCount),(20,50),(255,0,0))
+
+
+            DisabledPeopleCount = 0
             # Stream results
             im0 = annotator.result()
             if view_img:
@@ -212,11 +229,11 @@ def run(
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'yolov5s.pt', help='model path(s)')
+    parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'best.pt', help='model path(s)')
     parser.add_argument('--source', type=str, default=ROOT / 'data/images', help='file/dir/URL/glob, 0 for webcam')
     parser.add_argument('--data', type=str, default=ROOT / 'data/coco128.yaml', help='(optional) dataset.yaml path')
     parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[640], help='inference size h,w')
-    parser.add_argument('--conf-thres', type=float, default=0.25, help='confidence threshold')
+    parser.add_argument('--conf-thres', type=float, default=0.4, help='confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='NMS IoU threshold')
     parser.add_argument('--max-det', type=int, default=1000, help='maximum detections per image')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
@@ -233,7 +250,7 @@ def parse_opt():
     parser.add_argument('--project', default=ROOT / 'runs/detect', help='save results to project/name')
     parser.add_argument('--name', default='exp', help='save results to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
-    parser.add_argument('--line-thickness', default=3, type=int, help='bounding box thickness (pixels)')
+    parser.add_argument('--line-thickness', default=2, type=int, help='bounding box thickness (pixels)')
     parser.add_argument('--hide-labels', default=False, action='store_true', help='hide labels')
     parser.add_argument('--hide-conf', default=False, action='store_true', help='hide confidences')
     parser.add_argument('--half', action='store_true', help='use FP16 half-precision inference')
@@ -244,6 +261,12 @@ def parse_opt():
     print_args(vars(opt))
     return opt
 
+#FUNCTION TO DISPLAY LABELS
+def showCountLabel(img, text, pos, bg_color):
+    font_face = cv2.FONT_HERSHEY_DUPLEX
+    scale = 2
+    color = (0, 255, 162)
+    cv2.putText(img, text, pos, font_face, scale, color,3, cv2.LINE_AA)
 
 def main(opt):
     check_requirements(exclude=('tensorboard', 'thop'))
